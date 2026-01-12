@@ -1,0 +1,31 @@
+services:
+  php:
+    image: php:8.4-fpm-alpine
+    container_name: neoarchlinux.org_php
+    volumes:
+      - ./public:/var/www/html/public:ro
+      - ./routes:/var/www/html/routes:ro
+      - ./src:/var/www/src:ro
+    restart: unless-stopped
+    networks:
+      - neoarchlinux.org
+
+  nginx:
+    image: nginx:stable-alpine
+    container_name: neoarchlinux.org_nginx
+    depends_on:
+      - php
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./public:/var/www/html/public:ro
+      - ./routes:/var/www/html/routes:ro
+      - ./src:/var/www/src:ro
+      - ./nginx/log:/var/log/nginx:rw
+      - ./nginx/ssl:/etc/nginx/ssl:ro
+    restart: unless-stopped
+    networks:
+      - neoarchlinux.org
+
+networks:
+  neoarchlinux.org:
+    external: true
