@@ -1,7 +1,11 @@
 services:
   php:
-    image: php:8.4-fpm-alpine
+    build:
+      context: .
+      dockerfile: docker/php.Dockerfile
     container_name: neoarchlinux.org_php
+    env_file:
+      - .env
     volumes:
       - ./public:/var/www/html/public:ro
       - ./routes:/var/www/html/routes:ro
@@ -25,6 +29,37 @@ services:
     restart: unless-stopped
     networks:
       - neoarchlinux.org
+
+  postgres:
+    image: postgres:18-alpine
+    container_name: neoarchlinux.org_postgres
+    environment:
+      - POSTGRES_DB=${DB_NAME}
+      - POSTGRES_USER=${DB_USER}
+      - POSTGRES_PASSWORD=${DB_PASS}
+    volumes:
+      - neoarch_pgdata:/var/lib/postgresql/data
+    restart: unless-stopped
+    networks:
+      - neoarchlinux.org
+
+  package-updater:
+    build:
+      context: .
+      dockerfile: docker/package-updater.Dockerfile
+    container_name: neoarchlinux.org_package_updater
+    env_file:
+      - .env
+    depends_on:
+      - postgres
+    volumes:
+      - ./logs/package-updater:/var/log/package-updater
+    restart: unless-stopped
+    networks:
+      - neoarchlinux.org
+
+volumes:
+  neoarch_pgdata:    
 
 networks:
   neoarchlinux.org:
