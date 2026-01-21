@@ -1,3 +1,4 @@
 .env
 /nginx/log
 /nginx/ssl
+/build

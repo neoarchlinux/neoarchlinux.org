@@ -1,0 +1,8 @@
+NAME="NeoArch Linux"
+PRETTY_NAME="NeoArch Linux"
+ID=neoarch
+BUILD_ID=rolling
+ANSI_COLOR="38;2;67;185;238"
+HOME_URL="https://neoarchlinux.org/"
+DOCUMENTATION_URL="https://docs.neoarchlinux.org/"
+LOGO=neoarchlinux-logo

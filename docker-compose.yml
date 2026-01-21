@@ -26,6 +26,7 @@ services:
       - ./src:/var/www/src:ro
       - ./nginx/log:/var/log/nginx:rw
       - ./nginx/ssl:/etc/nginx/ssl:ro
+      - ./build:/tmp/iso-out
     restart: unless-stopped
     networks:
       - neoarchlinux.org
@@ -57,6 +58,18 @@ services:
     restart: unless-stopped
     networks:
       - neoarchlinux.org
+
+  iso-builder:
+    build:
+      context: .
+      dockerfile: docker/iso-builder.Dockerfile
+    container_name: neoarchlinux.org_iso_builder
+    volumes:
+      - ./build:/tmp/iso-out
+    restart: unless-stopped
+    networks:
+      - neoarchlinux.org
+    privileged: true
 
 volumes:
   neoarch_pgdata:    

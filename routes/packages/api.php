@@ -3,6 +3,15 @@ declare(strict_types=1);
 
 header('Content-Type: application/json; charset=utf-8');
 
+$domain = '';
+
+if (isset($_SERVER['HTTP_ORIGIN'])) $domain = $_SERVER['HTTP_ORIGIN'];
+else if (isset($_SERVER['HTTP_REFERER'])) $domain = $_SERVER['HTTP_REFERER'];
+
+if (str_ends_with($domain, '.neoarchlinux.org')) {
+    header('Access-Control-Allow-Origin: ' . $domain);
+}
+
 $dsn = sprintf(
     'pgsql:host=%s;dbname=%s',
     getenv('DB_HOST'),
@@ -14,7 +23,7 @@ $pass = getenv('DB_PASS');
 
 $q        = trim($_GET['q'] ?? '');
 $page     = max(1, (int)($_GET['page'] ?? 1));
-$perPage  = 50;
+$perPage  = min(50, (int)($_GET['per_page'] ?? 50));
 $offset   = ($page - 1) * $perPage;
 
 try {
@@ -31,6 +40,20 @@ try {
     exit;
 }
 
+$repoPriority = <<<SQL
+CASE repo
+    WHEN 'matrix'    THEN 1
+    WHEN 'system'    THEN 2
+    WHEN 'world'     THEN 3
+    WHEN 'galaxy'    THEN 4
+    WHEN 'lib32'     THEN 5
+    WHEN 'core'      THEN 6
+    WHEN 'extra'     THEN 7
+    WHEN 'multilib'  THEN 8
+    ELSE 100
+END
+SQL;
+
 $where = '';
 $params = [];
 
@@ -39,13 +62,20 @@ if ($q !== '') {
     $params[':q'] = "%$q%";
 }
 
-$countSql = "SELECT COUNT(*) FROM packages $where";
+$countSql = <<<SQL
+SELECT COUNT(*) FROM (
+    SELECT DISTINCT ON (name) name
+    FROM packages
+    $where
+    ORDER BY name, $repoPriority
+) AS t
+SQL;
 $countStmt = $pdo->prepare($countSql);
 $countStmt->execute($params);
 $total = (int)$countStmt->fetchColumn();
 
 $sql = <<<SQL
-SELECT
+SELECT DISTINCT ON (name)
     name,
     repo,
     version,
@@ -53,7 +83,9 @@ SELECT
     description
 FROM packages
 $where
-ORDER BY name
+ORDER BY
+    name,
+    $repoPriority
 LIMIT :limit OFFSET :offset
 SQL;
 

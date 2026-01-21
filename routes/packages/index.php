@@ -82,7 +82,7 @@
     </tr>
     </thead>
     <tbody>
-    <tr><td colspan="5">Loading packages…</td></tr>
+        <tr><td colspan="5">Loading packages…</td></tr>
     </tbody>
     </table>
 
