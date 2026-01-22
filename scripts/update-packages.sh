@@ -57,13 +57,14 @@ for DBFILE in "$TMPDIR"/*.db; do
   --set=repo="$REPO_NAME" \
   --set=ver="$PKG_VER" \
   --set=arch="$PKG_ARCH" <<'SQL'
-INSERT INTO packages (name, description, repo, version, arch)
-VALUES (:'name', :'desc', :'repo', :'ver', :'arch')
+INSERT INTO package_meta (name, description, repo, version, arch, last_updated)
+VALUES (:'name', :'desc', :'repo', :'ver', :'arch', CURRENT_DATE)
 ON CONFLICT (name, repo) DO UPDATE
 SET
   description = EXCLUDED.description,
   version = EXCLUDED.version,
-  arch = EXCLUDED.arch;
+  arch = EXCLUDED.arch,
+  last_updated = EXCLUDED.last_updated;
 SQL
     done
 done

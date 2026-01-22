@@ -1,0 +1,5 @@
+CREATE TABLE IF NOT EXISTS arches (
+    id SERIAL PRIMARY KEY,
+    arch_name TEXT UNIQUE NOT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT NOW()
+);

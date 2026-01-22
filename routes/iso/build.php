@@ -81,7 +81,7 @@ $params  = $_POST;
 <script>
     const params = <?= json_encode($params, JSON_UNESCAPED_SLASHES) ?>;
 
-    const ws = new WebSocket("wss://iso.neoarchlinux.org/ws");
+    const ws = new WebSocket(<?php echo "'wss://iso.$DOMAIN/ws'"; ?>);
 
     const statusText  = document.querySelector("#status-text");
     const progressFill = document.querySelector("#progress-fill");
@@ -146,7 +146,7 @@ $params  = $_POST;
 
     ws.onclose = () => {
         console.log("%c WS connection closed", "color: #da5555");
-        statusText.textContent = "Connection closed";
+        statusText.textContent = finished ? "Build finished" : "Connection closed";
         progressFill.style.background = finished ? '#55da55' : '#dada55';
         progressFill.style.width = "100%";
         clearInterval(wsKeepAliveInterval);

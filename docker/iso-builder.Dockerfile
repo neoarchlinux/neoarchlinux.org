@@ -39,4 +39,4 @@ COPY iso /iso
 
 USER root
 
-CMD ["python", "iso-builder.py"]
+CMD ["python", "-u", "iso-builder.py"]

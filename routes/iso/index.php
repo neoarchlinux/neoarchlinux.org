@@ -65,6 +65,7 @@
 </head>
 <body>
 
+<?php require_once '/var/www/src/config.php'; ?>
 <?php require_once '/var/www/src/header.php'; ?>
 
 <main>
@@ -264,7 +265,7 @@
     let totalPages = 1;
 
     async function fetchPackages(query, page=1) {
-        const url = `https://packages.neoarchlinux.org/api?q=${encodeURIComponent(query)}&page=${page}&per_page=${perPage}`;
+        const url = <?php echo "`https://packages.$DOMAIN/api?q=\${encodeURIComponent(query)}&page=\${page}&per_page=\${perPage}`"; ?>;
         const res = await fetch(url);
         if (!res.ok) return { results: [], total: 0 };
         const data = await res.json();

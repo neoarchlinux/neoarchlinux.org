@@ -1,0 +1,5 @@
+CREATE TABLE IF NOT EXISTS packages (
+    id SERIAL PRIMARY KEY,
+    package_name TEXT UNIQUE NOT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT NOW()
+);

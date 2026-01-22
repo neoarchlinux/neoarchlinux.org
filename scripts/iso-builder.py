@@ -8,7 +8,7 @@ import os
 import time
 import shlex
 
-out_dir = f'/tmp/iso-out'
+out_dir = f'/app/isos' # TODO: per-iso dir
 
 async def handle(ws):
     raw = await ws.recv()
@@ -20,6 +20,8 @@ async def handle(ws):
     print(f"[{build_id}] build started")
 
     async def send(status, phase):
+        print(f"[{build_id}] status: {status}")
+
         msg = {
             "status": status,
             "phase": phase,
@@ -470,7 +472,7 @@ fi
     async def _build_iso_image():
         await send("Building the ISO", 11)
         await _cmd_async(f'rm -rf "{work_dir}/{arch}/airootfs"')
-        await _cmd_async(f'install -d -- "{out_dir}"')
+        # await _cmd_async(f'install -d -- "{out_dir}"')
         xorriso_options = ['-no_rc']
         xorrisofs_options = [
             '-partition_offset', '16',
@@ -484,7 +486,7 @@ fi
         if (int(await _cmd_async(f'du -s --apparent-size -B1M "{isofs_dir}/" | awk \'{{ print $1 }}\'')) > 900):
             xorrisofs_options.append('-no-pad')
         
-        await _cmd_async(f'rm -rf "{out_dir}/{image_name}"')
+        await _cmd_async(f'rm -rf "{work_dir}/{image_name}"')
 
         xorriso_opts = " ".join(xorriso_options)
         xorrisofs_opts = " ".join(xorrisofs_options)
@@ -500,9 +502,11 @@ fi
                 + f' -publisher "{iso_publisher}"'
                 + f' -preparer "prepared by https://iso.neoarchlinux.org"'
                 + f' {xorrisofs_opts}'
-                + f' -output "{out_dir}/{image_name}"'
+                + f' -output "{work_dir}/{image_name}"'
                 + f' "{isofs_dir}/"'
         )
+
+        await _cmd_async(f'mv "{work_dir}/{image_name}" "{out_dir}/{image_name}"')
 
     async def _build_buildmode_iso():
         global image_name, efibootimg
@@ -565,7 +569,7 @@ fi
 
     await ws.send(json.dumps({
         "status": "Done",
-        "download_url": f"https://iso.neoarchlinux.org/download/{image_name}"
+        "download_url": f"/download/{image_name}"
     }))
 
     await ws.close()

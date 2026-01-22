@@ -3,78 +3,80 @@ services:
     build:
       context: .
       dockerfile: docker/php.Dockerfile
-    container_name: neoarchlinux.org_php
+    container_name: neoarch_test_php
     env_file:
-      - .env
+      - test.env
     volumes:
       - ./public:/var/www/html/public:ro
       - ./routes:/var/www/html/routes:ro
       - ./src:/var/www/src:ro
-      - ./app/mirrors:/var/mirrors:rw
-      - ./app/gnupg:/srv/http/.gnupg:rw
+      - ./app-test/mirrors:/var/mirrors:rw
+      - ./app-test/gnupg:/srv/http/.gnupg:rw
     restart: unless-stopped
     networks:
-      - neoarchlinux.org
+      - neoarch-test
     user: "0:0"
 
   nginx:
     image: nginx:stable-alpine
-    container_name: neoarchlinux.org_nginx
+    container_name: neoarch_test_nginx
     depends_on:
       - php
+    ports:
+      - "8443:443"
     volumes:
-      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/nginx.test.conf:/etc/nginx/nginx.conf:ro
       - ./public:/var/www/html/public:ro
       - ./routes:/var/www/html/routes:ro
       - ./src:/var/www/src:ro
-      - ./app/ssl:/etc/nginx/ssl:ro
-      - ./app/logs/nginx:/var/log/nginx:rw
-      - ./app/mirrors:/var/mirrors:ro
-      - ./app/isos:/app/isos:ro
+      - ./app-test/ssl:/etc/nginx/ssl:ro
+      - ./app-test/logs/nginx:/var/log/nginx:rw
+      - ./app-test/mirrors:/var/mirrors:ro
+      - ./app-test/isos:/app/isos:ro
     restart: unless-stopped
     networks:
-      - neoarchlinux.org
+      - neoarch-test
 
   postgres:
     image: postgres:18-alpine
-    container_name: neoarchlinux.org_postgres
+    container_name: neoarch_test_postgres
     environment:
-      - POSTGRES_DB=${DB_NAME}
-      - POSTGRES_USER=${DB_USER}
-      - POSTGRES_PASSWORD=${DB_PASS}
+      POSTGRES_DB: neoarch_test
+      POSTGRES_USER: neoarch_test
+      POSTGRES_PASSWORD: testpassword
     volumes:
-      - ./app/db_data:/var/lib/postgresql/data:rw
+      - ./app-test/db_data:/var/lib/postgresql/data:rw
     restart: unless-stopped
     networks:
-      - neoarchlinux.org
+      - neoarch-test
 
   package-updater:
     build:
       context: .
       dockerfile: docker/package-updater.Dockerfile
-    container_name: neoarchlinux.org_package_updater
+    container_name: neoarch_test_package_updater
     env_file:
-      - .env
+      - test.env
     depends_on:
       - postgres
     volumes:
-      - ./app/logs/package-updater:/var/log/package-updater:rw
+      - ./app-test/logs/package-updater:/var/log/package-updater:rw
     restart: unless-stopped
     networks:
-      - neoarchlinux.org
+      - neoarch-test
 
   iso-builder:
     build:
       context: .
       dockerfile: docker/iso-builder.Dockerfile
-    container_name: neoarchlinux.org_iso_builder
+    container_name: neoarch_test_iso_builder
     volumes:
-      - ./app/isos:/app/isos:rw
+      - ./app-test/isos:/app/isos:rw
     restart: unless-stopped
     networks:
-      - neoarchlinux.org
+      - neoarch-test
     privileged: true
 
 networks:
-  neoarchlinux.org:
-    external: true
+  neoarch-test:
+    driver: bridge
