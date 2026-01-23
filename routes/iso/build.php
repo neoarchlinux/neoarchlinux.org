@@ -1,6 +1,6 @@
 <?php
 
-$params  = $_POST;
+$params = $_POST;
 
 ?>
 
