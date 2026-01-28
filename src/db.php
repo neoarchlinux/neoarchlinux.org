@@ -190,9 +190,7 @@ function searchPackages(PDO $pdo, string $q, int $page, int $perPage) {
     $sql = <<<SQL
         SELECT DISTINCT ON (name)
             name,
-            repo,
             version,
-            arch,
             description
         FROM package_meta
         $where

@@ -76,8 +76,6 @@
     <tr>
         <th>Name</th>
         <th>Version</th>
-        <th>Arch</th>
-        <th>Repo</th>
         <th>Description</th>
     </tr>
     </thead>
@@ -127,8 +125,6 @@
                 <tr>
                     <td>${pkg.name}</td>
                     <td>${pkg.version}</td>
-                    <td>${pkg.arch}</td>
-                    <td>${pkg.repo}</td>
                     <td>${pkg.description}</td>
                 </tr>
             `).join('');
