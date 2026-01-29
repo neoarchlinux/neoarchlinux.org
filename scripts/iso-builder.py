@@ -8,19 +8,45 @@ import os
 import time
 import shlex
 
-out_dir = f'/app/isos' # TODO: per-iso dir
+out_dir_base = f'/app/isos'
+
+# cmds
+
+def _cmd_impl(c, check=True):
+    proc = subprocess.run(
+        ["bash", "-c", c],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True
+    )
+
+    if check and proc.returncode != 0:
+        raise RuntimeError(
+            "Command failed\n"
+            f"command: {c}\n"
+            f"exit code: {proc.returncode}\n"
+            f"stderr:\n{proc.stderr}"
+        )
+
+    return proc
+
+def _cmd(c, check = True):
+    return _cmd_impl(c, check = check).stdout
+
+async def _cmd_async(c, check = True):
+    return await asyncio.to_thread(_cmd, c, check)
+
+def _cmd_ok(c, check = True):
+    return _cmd_impl(c, check = check).returncode == 0
+
+async def _cmd_ok_async(c, check = True):
+    return await asyncio.to_thread(_cmd_ok, c, check)
+
+# ~cmds
 
 async def handle(ws):
-    raw = await ws.recv()
-    init = json.loads(raw)
-
-    build_id = str(uuid.uuid4())
-    params = init.get("params")
-
-    print(f"[{build_id}] build started")
-
     async def send(status, phase):
-        print(f"[{build_id}] status: {status}")
+        print(f"[{build_id}] {status}")
 
         msg = {
             "status": status,
@@ -29,41 +55,80 @@ async def handle(ws):
         }
 
         await ws.send(json.dumps(msg))
+    # ~send
 
-    def _cmd_impl(c, check=True):
-        proc = subprocess.run(
-            ["bash", "-c", c],
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            text=True
-        )
+    try:
+        # request
+        raw = await ws.recv()
+        init = json.loads(raw)
+        params = init.get("params")
 
-        if check and proc.returncode != 0:
-            raise RuntimeError(
-                "Command failed\n"
-                f"command: {c}\n"
-                f"exit code: {proc.returncode}\n"
-                f"stderr:\n{proc.stderr}"
-            )
+        # parse request
+        hostname = params['hostname'] # TODO: set hostname
+        language = params['language'] # TODO: set language
+        # TODO: users
+        # TODO: additional packages
+        # TODO: kernel
+        init_system = params['init_system']
+        # TODO: enable_testing
+        # TODO: parallel_downloads
 
-        return proc
+        # init vars
+        build_id = str(uuid.uuid4())
+        print(f"[{build_id}] Build started")
+        out_dir = f"{out_dir_base}/{build_id}"
+        iso_name = "neoarchlinux"
+        iso_uuid = f'{build_id}-{datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S")}'
+        iso_label = f"NEOARCH_{datetime.datetime.now().strftime('%Y%m')}"
+        iso_publisher = "NeoArch Linux"
+        iso_application = "NeoArch Linux Live + Installer"
+        iso_version = datetime.datetime.now().strftime("%Y.%m.%d")
+        install_dir = "neoarch"
+        bootmodes = ['uefi.grub']
+        pacman_conf = "/iso/profile/pacman.conf"
+        airootfs_image_type = "erofs"
+        airootfs_image_tool_options = ['-zlzma,109', '-E', 'ztailpacking']
+        bootstrap_tarball_compression = ['zstd', '-c', '-T0', '--long', '-19']
 
-    def _cmd(c, check = True):
-        return _cmd_impl(c, check = check).stdout
+        packages = [
+            'arch-install-scripts', # ???
+            'base',
+            'base-devel',
+            'efibootmgr',
+            'grub',
+            'mkinitcpio',
+            'mkinitcpio-archiso', # ???
+            'napm',
+            'neoarch-keyring',
+            'networkmanager',
+            'open-vm-tools',
+            'os-prober',
+            'qemu-guest-agent',
+            'syslinux',
+            'virtualbox-guest-utils-nox'
+        ]
 
-    async def _cmd_async(c, check=True):
-        return await asyncio.to_thread(_cmd, c, check)
+        if init_system == 'systemd':
+            pass
+        else:
+            packages.append('artix-archlinux-support')
+            packages.append(init_system)
+            packages.append(f'elogind-{init_system}')
+            packages.append(f'networkmanager-{init_system}')
 
-    def _cmd_ok(c, check = True):
-        return _cmd_impl(c, check = check).returncode == 0
+        # build iso
+        work_dir = f'/tmp/iso-{build_id}'
+        image_name = f"{hostname}.iso"
+        efibootimg = f"{work_dir}/efiboot.img"
+        
+        # build iso base
+        pacstrap_dir = f"{work_dir}/airootfs"
+        isofs_dir = f"{work_dir}/iso"
 
-    async def _cmd_ok_async(c, check=True):
-        return await asyncio.to_thread(_cmd_ok, c, check)
-
-    async def _make_work_dir():
+        # make work dir
         await _cmd_async(f'install -d -- "{work_dir}"')
 
-    async def _make_pacman_conf():
+        # make pacman conf
         await _cmd_async(f"""
             pacman-conf --config {pacman_conf} | sed '
             /CacheDir/d
@@ -76,25 +141,25 @@ async def handle(ws):
             ' > "{work_dir}/iso.pacman.conf"
             """)
 
-    async def _make_custom_airootfs():
+        # TODO: export gpg publickey
+        
+        # make custom airootfs
         await send("Copying files", 1)
-        global passwd, filename, permissions
         passwd = []
-
         await _cmd_async(f'install -d -m 0755 -o 0 -g 0 -- "{pacstrap_dir}"')
         await _cmd_async(f'cp -af --no-preserve=ownership,mode -- "/iso/profile/airootfs/." "{pacstrap_dir}"')
         await _cmd_async(f'chown -fhR -- "0:0" "{pacstrap_dir}/etc/shadow"')
         await _cmd_async(f'chmod -f -- "400" "{pacstrap_dir}/etc/shadow"')
 
-    async def _make_packages():
+        # make packages
         await send("Installing ISO packages", 2)
         await _cmd_async(f'env -u TMPDIR pacstrap -C "{work_dir}/iso.pacman.conf" -c -G -M -- "{pacstrap_dir}" {' '.join(packages)} > /dev/null')
-
+        
+        # copy correct pacman conf
         await _cmd_async(f'install -m 0644 -- "{pacman_conf}" "{pacstrap_dir}/etc/pacman.conf"')
 
-    async def _make_version():
+        # make version
         await send("Creating version files", 3)
-        global search_filename
         search_filename = f"/boot/{iso_uuid}.uuid"
         await _cmd_async(f'rm -f -- "{pacstrap_dir}/version"')
         await _cmd_async(f'printf \'%s\\n\' "{iso_version}" > "{pacstrap_dir}/version"')
@@ -108,7 +173,7 @@ async def handle(ws):
             f"VERSION={iso_version}\n"
             f"ARCHISO_LABEL={iso_label}\n"
             f"INSTALL_DIR={install_dir}\n"
-            f"ARCH={arch}\n"
+            f"ARCH=x86_64\n"
             f"ARCHISO_SEARCH_FILENAME={search_filename}\n"
             + "#" * 1024
         )
@@ -121,20 +186,22 @@ async def handle(ws):
         await _cmd_async(f'touch -m -d"@{datetime.datetime.now().strftime("%s")}" -- "{pacstrap_dir}/usr/lib/clock-epoch"')
         await _cmd_async(f'touch "{isofs_dir}{search_filename}"')
 
-    async def _make_pkglist():
+        # make package listing
         await send("Creating package listing", 4)
         await _cmd_async(f'install -d -m 0755 -- "{isofs_dir}/{install_dir}"')
-        await _cmd_async(f'pacman -Q --sysroot "{pacstrap_dir}" > "{isofs_dir}/{install_dir}/pkglist.{arch}.txt"')
+        await _cmd_async(f'pacman -Q --sysroot "{pacstrap_dir}" > "{isofs_dir}/{install_dir}/pkglist.x86_64.txt"')
 
-    async def _make_boot_on_iso9660():
+        # TODO: check if initramfs has ucode
+
+        # make boot on iso9660
         await send("Perparing the ISO file system", 5)
-        await _cmd_async(f'install -d -m 0755 -- "{isofs_dir}/{install_dir}/boot/{arch}"')
-        await _cmd_async(f'install -m 0644 -- "{pacstrap_dir}/boot/initramfs-"*".img" "{isofs_dir}/{install_dir}/boot/{arch}/"')
-        await _cmd_async(f'install -m 0644 -- "{pacstrap_dir}/boot/vmlinuz-"* "{isofs_dir}/{install_dir}/boot/{arch}/"')
+        await _cmd_async(f'install -d -m 0755 -- "{isofs_dir}/{install_dir}/boot"')
+        await _cmd_async(f'install -m 0644 -- "{pacstrap_dir}/boot/initramfs-"*".img" "{isofs_dir}/{install_dir}/boot/"')
+        await _cmd_async(f'install -m 0644 -- "{pacstrap_dir}/boot/vmlinuz-"* "{isofs_dir}/{install_dir}/boot/"')
 
         # TODO: if need external ucodes, install
-
-    async def _make_grub():
+        
+        # make grub
         await send("Setting up GRUB", 6)
         grub_target = 'x86_64-efi'
         await _cmd_async(f'install -d -- "{work_dir}/grub"')
@@ -145,42 +212,41 @@ async def handle(ws):
         ]:
             await _cmd_async(f'''
                 sed "s|%ARCHISO_LABEL%|{iso_label}|g;
-                     s|%ARCHISO_UUID%|{iso_uuid}|g;
-                     s|%INSTALL_DIR%|{install_dir}|g;
-                     s|%ARCH%|{arch}|g;
-                     s|%ARCHISO_SEARCH_FILENAME%|{search_filename}|g" \\
-                     "/iso/profile/grub/{_cfg}" > "{work_dir}/grub/{_cfg}"
+                        s|%ARCHISO_UUID%|{iso_uuid}|g;
+                        s|%INSTALL_DIR%|{install_dir}|g;
+                        s|%ARCHISO_SEARCH_FILENAME%|{search_filename}|g" \\
+                        "/iso/profile/grub/{_cfg}" > "{work_dir}/grub/{_cfg}"
             ''')
 
         grubembedcfg = r'''
 if ! [ -d "$cmdpath" ]; then
-    if regexp --set=1:archiso_bootdevice '^\(([^)]+)\)\/?[Ee][Ff][Ii]\/[Bb][Oo][Oo][Tt]\/?$' "${cmdpath}"; then
-        set cmdpath="(${archiso_bootdevice})/EFI/BOOT"
-        set ARCHISO_HINT="${archiso_bootdevice}"
-    fi
+if regexp --set=1:archiso_bootdevice '^\(([^)]+)\)\/?[Ee][Ff][Ii]\/[Bb][Oo][Oo][Tt]\/?$' "${cmdpath}"; then
+    set cmdpath="(${archiso_bootdevice})/EFI/BOOT"
+    set ARCHISO_HINT="${archiso_bootdevice}"
+fi
 fi
 
 if [ -z "${ARCHISO_HINT}" ]; then
-    regexp --set=1:ARCHISO_HINT '^\(([^)]+)\)' "${cmdpath}"
+regexp --set=1:ARCHISO_HINT '^\(([^)]+)\)' "${cmdpath}"
 fi
 
 if search --no-floppy --set=archiso_device --file '%ARCHISO_SEARCH_FILENAME%' --hint "${ARCHISO_HINT}"; then
-    set ARCHISO_HINT="${archiso_device}"
-    if probe --set ARCHISO_UUID --fs-uuid "${ARCHISO_HINT}"; then
-        export ARCHISO_UUID
-    fi
+set ARCHISO_HINT="${archiso_device}"
+if probe --set ARCHISO_UUID --fs-uuid "${ARCHISO_HINT}"; then
+    export ARCHISO_UUID
+fi
 else
-    echo "Could not find a volume with a '%ARCHISO_SEARCH_FILENAME%' file on it!"
+echo "Could not find a volume with a '%ARCHISO_SEARCH_FILENAME%' file on it!"
 fi
 
 if [ "${ARCHISO_HINT}" == 'memdisk' -o -z "${ARCHISO_HINT}" ]; then
-    echo 'Could not find the ISO volume!'
+echo 'Could not find the ISO volume!'
 elif [ -e "(${ARCHISO_HINT})/boot/grub/grub.cfg" ]; then
-    export ARCHISO_HINT
-    set root="${ARCHISO_HINT}"
-    configfile "(${ARCHISO_HINT})/boot/grub/grub.cfg"
+export ARCHISO_HINT
+set root="${ARCHISO_HINT}"
+configfile "(${ARCHISO_HINT})/boot/grub/grub.cfg"
 else
-    echo "File '(${ARCHISO_HINT})/boot/grub/grub.cfg' not found!"
+echo "File '(${ARCHISO_HINT})/boot/grub/grub.cfg' not found!"
 fi
         '''.strip()
 
@@ -199,7 +265,7 @@ fi
             f"VERSION={iso_version}\n"
             f"ARCHISO_LABEL={iso_label}\n"
             f"INSTALL_DIR={install_dir}\n"
-            f"ARCH={arch}\n"
+            f"ARCH=x86_64\n"
             f"ARCHISO_SEARCH_FILENAME={search_filename}\n"
         )
 
@@ -387,7 +453,7 @@ fi
                 f'"{pacstrap_dir}/usr/share/licenses/spdx/GPL-2.0-only.txt" '
                 f'"{isofs_dir}/boot/memtest86+/LICENSE"'
             )
-    
+
         await _cmd_async(f'install -d -m 0755 -- "{isofs_dir}/boot/grub"')
 
         await _cmd_async(
@@ -398,7 +464,7 @@ fi
                     "{iso_version}" \
                     "{iso_label}" \
                     "{install_dir}" \
-                    "{arch}" \
+                    "x86_64" \
                     "{search_filename}" \
                     "$(printf '%0.1s' "#"{{1..1024}})"
             )" > "{isofs_dir}/boot/grub/grubenv"
@@ -418,13 +484,12 @@ fi
                     s|%ARCHISO_LABEL%|{iso_label}|g;
                     s|%ARCHISO_UUID%|{iso_uuid}|g;
                     s|%INSTALL_DIR%|{install_dir}|g;
-                    s|%ARCH%|{arch}|g;
                     s|%ARCHISO_SEARCH_FILENAME%|{search_filename}|g
                 " "{loopback_src}" > "{loopback_dst}"
                 '''
             )
 
-    async def _cleanup_pacstrap_dir():
+        # clean pacstrap
         await send("Removing unnecessary files", 8)
         await _cmd_async(f'find "{pacstrap_dir}/boot" -mindepth 1 -delete')
         await _cmd_async(f'find "{pacstrap_dir}/var/lib/pacman" -maxdepth 1 -type f -delete')
@@ -435,44 +500,25 @@ fi
         await _cmd_async(f'find "{work_dir}" \\( -name \'*.pacnew\' -o -name \'*.pacsave\' -o -name \'*.pacorig\' \\) -delete')
         await _cmd_async(f'rm -f -- "{pacstrap_dir}/etc/machine-id"')
         await _cmd_async(f'echo "uninitialized" > "{pacstrap_dir}/etc/machine-id"')
-
-    async def _mkairootfs_erofs():
+        
+        # make airootfs erofs
         await send("Creating the ISO filesystem", 9)
-        await _cmd_async(f'install -d -m 0755 -- "{isofs_dir}/{install_dir}/{arch}"')
-        image_path = f"{isofs_dir}/{install_dir}/{arch}/airootfs.erofs"
+        await _cmd_async(f'install -d -m 0755 -- "{isofs_dir}/{install_dir}/x86_64"')
+        image_path = f"{isofs_dir}/{install_dir}/x86_64/airootfs.erofs"
         await _cmd_async(f'rm -f -- "{image_path}"')
         opts = " ".join(airootfs_image_tool_options)
         await _cmd_async(f'mkfs.erofs -U 00000000-0000-0000-0000-000000000000 {opts} -- "{image_path}" "{pacstrap_dir}"')
-
-    async def _mkchecksum():
+        
+        # make checksum
         await send("Creating the ISO checksum", 10)
-        wd = f'{isofs_dir}/{install_dir}/{arch}'
+        wd = f'{isofs_dir}/{install_dir}/x86_64'
         await _cmd_async(f'sha512sum "{wd}/airootfs.erofs" > "{wd}/airootfs.sha512"')
 
-    async def _build_iso_base():
-        global pacstrap_dir, isofs_dir
-        pacstrap_dir = f"{work_dir}/{arch}/airootfs"
-        isofs_dir = f"{work_dir}/iso"
-        await _make_work_dir()
-        await _make_pacman_conf()
-        # await _export_gpg_publickey()
-        await _make_custom_airootfs()
-        await _make_packages()
-        await _make_version()
-        # await _make_customize_airootfs()
-        await _make_pkglist()
-        # await _check_if_initramfs_has_ucode()
-        await _make_boot_on_iso9660()
-        await _make_grub()
-        await _cleanup_pacstrap_dir()
-        await _mkairootfs_erofs()
-        await _mkchecksum()
         # TODO: gpg and cert
 
-    async def _build_iso_image():
+        # build iso image
         await send("Building the ISO", 11)
-        await _cmd_async(f'rm -rf "{work_dir}/{arch}/airootfs"')
-        # await _cmd_async(f'install -d -- "{out_dir}"')
+        await _cmd_async(f'rm -rf "{work_dir}/x86_64/airootfs"')
         xorriso_options = ['-no_rc']
         xorrisofs_options = [
             '-partition_offset', '16',
@@ -492,11 +538,11 @@ fi
         xorrisofs_opts = " ".join(xorrisofs_options)
         await _cmd_async(
             f'xorriso {xorriso_opts} -as mkisofs'
-                + ' -iso-level 3'
-                + ' -full-iso9660-filenames'
-                + ' -joliet'
-                + ' -joliet-long'
-                + ' -rational-rock'
+                +  ' -iso-level 3'
+                +  ' -full-iso9660-filenames'
+                +  ' -joliet'
+                +  ' -joliet-long'
+                +  ' -rational-rock'
                 + f' -volid "{iso_label}"'
                 + f' -appid "{iso_application}"'
                 + f' -publisher "{iso_publisher}"'
@@ -506,109 +552,42 @@ fi
                 + f' "{isofs_dir}/"'
         )
 
+        await _cmd_async(f'install -d -- "{out_dir}"')
         await _cmd_async(f'mv "{work_dir}/{image_name}" "{out_dir}/{image_name}"')
 
-    async def _build_buildmode_iso():
-        global image_name, efibootimg
-        image_name = f"{iso_name}-{iso_version}-{arch}.iso"
-        efibootimg = f"{work_dir}/efiboot.img"
-        await _build_iso_base()
-        await _build_iso_image()
         await send("Removing unnecessary files", 12)
         await _cmd_async(f'rm -rf "{work_dir}/"')
 
-    iso_name = "neoarchlinux"
-    iso_uuid = f'{build_id}-{datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S")}'
-    iso_label = f"NEOARCH_{datetime.datetime.now().strftime('%Y%m')}"
-    iso_publisher = "NeoArch Linux"
-    iso_application = "NeoArch Linux / Installer"
-    iso_version = datetime.datetime.now().strftime("%Y.%m.%d")
-    install_dir = "neoarch"
-    bootmodes = ['uefi.grub']
-    pacman_conf = "/iso/profile/pacman.conf"
-    airootfs_image_type = "erofs"
-    airootfs_image_tool_options = ['-zlzma,109', '-E', 'ztailpacking']
-    bootstrap_tarball_compression = ['zstd', '-c', '-T0', '--long', '-19']
-    # file_permissions = {
-    #     "/etc/shadow": "0:0:400"
-    # }
+        await ws.send(json.dumps({
+            "status": "Done",
+            "download_url": f"/download/{build_id}/{image_name}"
+        }))
+    except Exception as e:
+        print(f"[{build_id}] An error occured: {e}")
 
-    arch = 'x86_64'
-
-    packages = [
-        'arch-install-scripts', # ???
-        'base',
-        'base-devel',
-        'efibootmgr',
-        'grub',
-        'mkinitcpio',
-        'mkinitcpio-archiso', # ???
-        'napm',
-        'neoarch-keyring',
-        'networkmanager',
-        'open-vm-tools',
-        'os-prober',
-        'qemu-guest-agent',
-        'syslinux',
-        'virtualbox-guest-utils-nox'
-    ]
-
-    init_system = params.get('init_system', 'openrc')
-
-    if init_system == 'systemd':
-        pass
-    else:
-        packages.append('artix-archlinux-support')
-        packages.append(init_system)
-        packages.append(f'elogind-{init_system}')
-        packages.append(f'networkmanager-{init_system}')
-
-    work_dir = f'/tmp/iso-{build_id}'
-
-    await _build_buildmode_iso()
-
-    await ws.send(json.dumps({
-        "status": "Done",
-        "download_url": f"/download/{image_name}"
-    }))
+        await ws.send(json.dumps({
+            "status": "Error"
+        }))
 
     await ws.close()
 
-async def cleanup_old_files_loop(out_dir, max_age_seconds, interval):
+    print(f"[{build_id}] Build finished")
+# ~handle
+
+async def cleanup_old_files_loop(out_dir_base, max_age_seconds, interval):
     while True:
-        now = time.time()
-
-        try:
-            entries = os.scandir(out_dir)
-        except FileNotFoundError:
-            await asyncio.sleep(interval)
-            continue
-
-        with entries:
-            for entry in entries:
-                if not entry.is_file():
-                    continue
-
-                try:
-                    age = now - entry.stat().st_mtime
-                except FileNotFoundError:
-                    continue
-
-                if age > max_age_seconds:
-                    try:
-                        os.unlink(entry.path)
-                    except OSError:
-                        pass
-
+        await _cmd_async(f"find {out_dir_base} -mindepth 1 -maxdepth 1 -type d -mmin +120 -exec rm -rf {{}} +")
         await asyncio.sleep(interval)
 
 async def main():
     asyncio.create_task(
-        cleanup_old_files_loop(out_dir, 3600, 600)
+        cleanup_old_files_loop(out_dir_base, 3600, 600)
     )
 
-    async with websockets.serve(handle, "0.0.0.0", 4150):
-        print("iso-builder ws listening on :4150")
+    port = 4150
+
+    async with websockets.serve(handle, "0.0.0.0", port):
+        print(f"iso-builder ws listening on :{port}")
         await asyncio.Future()
 
 asyncio.run(main())

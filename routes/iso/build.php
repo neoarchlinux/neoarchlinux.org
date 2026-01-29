@@ -2,6 +2,8 @@
 
 $params = $_POST;
 
+// TODO: validate params
+
 ?>
 
 <!DOCTYPE html>
@@ -83,12 +85,13 @@ $params = $_POST;
 
     const ws = new WebSocket(<?php echo "'wss://iso.$DOMAIN/ws'"; ?>);
 
+    let status = 'Waiting for server';
+
     const statusText  = document.querySelector("#status-text");
     const progressFill = document.querySelector("#progress-fill");
     const progressMeta = document.querySelector("#progress-meta");
 
     let wsKeepAliveInterval = 0;
-    let finished = false;
 
     ws.onopen = () => {
         console.log("%c WS connection opened", "color: #bada55");
@@ -113,12 +116,18 @@ $params = $_POST;
 
         if (data.status) {
             console.log("Status:", data);
-            statusText.textContent = data.status;
+            statusText.textContent = status = data.status;
 
-            if (data.status === 'Done') {
-                progressMeta.innerHTML = `ISO build finished, you can download it <a href="${data.download_url}">here</a>.`
-                finished = true;
-                return;
+            switch (data.status) {
+                case 'Done': {
+                    progressMeta.innerHTML = `ISO build finished, you can download it <a href="${data.download_url}">here</a>.`
+                    return;
+                }
+                case 'Error': {
+                    statusText.textContent = "WebSocket error";
+                    progressFill.style.background = '#da5555';
+                    progressFill.style.width = "100%";
+                }
             }
         }
 
@@ -146,8 +155,14 @@ $params = $_POST;
 
     ws.onclose = () => {
         console.log("%c WS connection closed", "color: #da5555");
-        statusText.textContent = finished ? "Build finished" : "Connection closed";
-        progressFill.style.background = finished ? '#55da55' : '#dada55';
+        statusText.textContent =
+            status == 'Error' ? "An error occured during you build" :
+            status == 'Done' ? "Build finished" :
+            "Connection closed";
+        progressFill.style.background =
+            status == 'Error' ? '#da5555' :
+            status == 'Done' ? '#55da55' :
+            '#dada55';
         progressFill.style.width = "100%";
         clearInterval(wsKeepAliveInterval);
     };
