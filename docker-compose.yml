@@ -24,6 +24,7 @@ services:
       - php
     volumes:
       - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/error.nginx.conf:/etc/nginx/error.nginx.conf:ro
       - ./public:/var/www/html/public:ro
       - ./routes:/var/www/html/routes:ro
       - ./src:/var/www/src:ro

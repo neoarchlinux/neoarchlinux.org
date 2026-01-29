@@ -38,6 +38,14 @@
             background-color: #181825;
         }
 
+        td a:link,
+        td a:visited,
+        td a:hover,
+        td a:active {
+            color: var(--accent-secondary);
+            text-decoration: none;
+        }
+
         #pagination {
             margin-top: 1rem;
             text-align: center;
@@ -123,7 +131,7 @@
         } else {
             tableBody.innerHTML = results.map(pkg => `
                 <tr>
-                    <td>${pkg.name}</td>
+                    <td><a href="/${pkg.name}">${pkg.name}</a></td>
                     <td>${pkg.version}</td>
                     <td>${pkg.description}</td>
                 </tr>

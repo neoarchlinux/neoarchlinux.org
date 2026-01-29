@@ -4,6 +4,7 @@
     --fg-text: #cdd6f4;
     --accent-primary: #1a556b;
     --accent-secondary: #34a9d5;
+    --accent-ternary: #38A14A;
 }
 
 /* Global */
@@ -114,7 +115,7 @@ body {
 }
 
 /* Show dropdown on hover for desktop */
-.header-nav-dropdown:hover > .nav-dropdown-menu {
+.header-nav-dropdown:hover>.nav-dropdown-menu {
     display: flex;
 }
 
@@ -180,7 +181,8 @@ body {
         display: flex;
         flex-direction: column;
         width: 100%;
-        align-items: center; /* center items horizontally */
+        align-items: center;
+        /* center items horizontally */
         text-align: center;
     }
 

@@ -158,8 +158,8 @@ function searchPackages(PDO $pdo, string $q, int $page, int $perPage) {
             WHEN 'galaxy'    THEN 2
             WHEN 'lib32'     THEN 2
             WHEN 'core'      THEN 3
-            WHEN 'extra'     THEN 4
-            WHEN 'multilib'  THEN 4
+            WHEN 'extra'     THEN 3
+            WHEN 'multilib'  THEN 3
             ELSE 100
         END
     SQL;
@@ -213,6 +213,147 @@ function searchPackages(PDO $pdo, string $q, int $page, int $perPage) {
 
     return [
         'total'   => $total,
-        'results' => $stmt->fetchAll()
+        'results' => $stmt->fetchAll(PDO::FETCH_ASSOC)
     ];
+}
+
+function getPackageMeta(PDO $pdo, string $packageName) {
+    $sql = <<<SQL
+        SELECT repo, name, version, description, url
+        FROM package_meta
+        WHERE name = :name
+    SQL;
+
+    $stmt = $pdo->prepare($sql);
+    $stmt->bindValue("name", $packageName, PDO::PARAM_STR);
+
+    $stmt->execute();
+
+    return $stmt->fetchAll(PDO::FETCH_ASSOC);
+}
+
+function getComponent(PDO $pdo, string $componentName) {
+    $sql = <<<SQL
+        SELECT name, is_virtual
+        FROM components
+        WHERE name = :name
+    SQL;
+
+    $stmt = $pdo->prepare($sql);
+    $stmt->bindValue("name", $componentName, PDO::PARAM_STR);
+
+    $stmt->execute();
+
+    return $stmt->fetchAll(PDO::FETCH_ASSOC);
+}
+
+function getRelation(PDO $pdo, string $packageName, string $relation, bool $withDesc) {
+    $maybeDesc = $withDesc ? ', pr.relation_description' : '';
+    
+    $sql = <<<SQL
+        SELECT DISTINCT
+            c.name,
+            pr.version_expr,
+            c.is_virtual,
+            p2.description
+            $maybeDesc
+        FROM package_relations pr
+        JOIN components c ON pr.component_id = c.id
+        JOIN package_meta p ON pr.package_id = p.id
+        LEFT JOIN package_meta p2 ON p2.name = c.name
+        WHERE p.name = :name
+          AND c.name != p.name
+          AND pr.relation_type = :relation;
+    SQL;
+
+    $stmt = $pdo->prepare($sql);
+    $stmt->bindValue("name", $packageName, PDO::PARAM_STR);
+    $stmt->bindValue("relation", $relation, PDO::PARAM_STR);
+
+    $stmt->execute();
+
+    return $stmt->fetchAll(PDO::FETCH_ASSOC);
+}
+
+function getReverseRelation(PDO $pdo, string $componentName, string $relation, bool $withDesc) {
+    $maybeDesc = $withDesc ? ', pr.relation_description' : '';
+    
+    $sql = <<<SQL
+        SELECT DISTINCT p.name, pr.version_expr, p.description $maybeDesc
+        FROM package_relations pr
+        JOIN components c ON pr.component_id = c.id
+        JOIN package_meta p ON pr.package_id = p.id
+        WHERE c.name = :name AND c.name != p.name AND pr.relation_type = :relation;
+    SQL;
+
+    $stmt = $pdo->prepare($sql);
+    $stmt->bindValue("name", $componentName, PDO::PARAM_STR);
+    $stmt->bindValue("relation", $relation, PDO::PARAM_STR);
+
+    $stmt->execute();
+
+    return $stmt->fetchAll(PDO::FETCH_ASSOC);
+}
+
+function getDependencies(PDO $pdo, string $packageName, bool $withDesc = false): array {
+    return getRelation($pdo, $packageName, 'DEPENDS', $withDesc);
+}
+
+function getOptDependencies(PDO $pdo, string $packageName, bool $withDesc = true): array {
+    return getRelation($pdo, $packageName, 'OPTDEPENDS', $withDesc);
+}
+
+function getMakeDependencies(PDO $pdo, string $packageName, bool $withDesc = false): array {
+    return getRelation($pdo, $packageName, 'MAKEDEPENDS', $withDesc);
+}
+
+function getProvides(PDO $pdo, string $packageName, bool $withDesc = false): array {
+    return getRelation($pdo, $packageName, 'PROVIDES', $withDesc);
+}
+
+function getDependants(PDO $pdo, string $componentName, bool $withDesc = false): array {
+    return getReverseRelation($pdo, $componentName, 'DEPENDS', $withDesc);
+}
+
+function getOptDependants(PDO $pdo, string $componentName, bool $withDesc = true): array {
+    return getReverseRelation($pdo, $componentName, 'OPTDEPENDS', $withDesc);
+}
+
+function getMakeDependants(PDO $pdo, string $componentName, bool $withDesc = false): array {
+    return getReverseRelation($pdo, $componentName, 'MAKEDEPENDS', $withDesc);
+}
+
+function getProviders(PDO $pdo, string $componentName, bool $withDesc = false): array {
+    return getReverseRelation($pdo, $componentName, 'PROVIDES', $withDesc);
+}
+
+function getConflicts(PDO $pdo, string $packageName, bool $withDesc = false): array {
+    $sql1 = <<<SQL
+        SELECT c.name, pr.version_expr, p2.description
+        FROM package_relations pr
+        JOIN components c ON pr.component_id = c.id
+        JOIN package_meta p ON pr.package_id = p.id
+        LEFT JOIN package_meta p2 ON p2.name = c.name
+        WHERE p.name = :name AND pr.relation_type = 'CONFLICTS'
+    SQL;
+
+    $sql2 = <<<SQL
+        SELECT p.name, pr.version_expr, p.description
+        FROM package_relations pr
+        JOIN components c ON pr.component_id = c.id
+        JOIN package_meta p ON pr.package_id = p.id
+        WHERE c.name = :name AND pr.relation_type = 'CONFLICTS'
+    SQL;
+
+    $stmt1 = $pdo->prepare($sql1);
+    $stmt1->bindValue('name', $packageName, PDO::PARAM_STR);
+    $stmt1->execute();
+    $results1 = $stmt1->fetchAll(PDO::FETCH_ASSOC);
+
+    $stmt2 = $pdo->prepare($sql2);
+    $stmt2->bindValue('name', $packageName, PDO::PARAM_STR);
+    $stmt2->execute();
+    $results2 = $stmt2->fetchAll(PDO::FETCH_ASSOC);
+
+    return array_merge($results1, $results2);
 }
