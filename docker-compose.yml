@@ -60,6 +60,8 @@ services:
       - postgres
     volumes:
       - ./app/logs/package-updater:/var/log/package-updater:rw
+      - ./app/mirrors:/app/mirrors:rw
+      - ./app/man:/app/man:rw
     restart: unless-stopped
     networks:
       - neoarchlinux.org

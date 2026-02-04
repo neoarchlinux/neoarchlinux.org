@@ -62,6 +62,8 @@ services:
       - postgres
     volumes:
       - ./app-test/logs/package-updater:/var/log/package-updater:rw
+      - ./app/mirrors:/app/mirrors:rw
+      - ./app/man:/app/man:rw
     restart: unless-stopped
     networks:
       - neoarch-test
