@@ -149,19 +149,19 @@ SQL
 }
 
 for repo in matrix; do
-    for pkgfile in "/app/mirrors/neoarch/${repo}"/*.pkg.tar.*; do
+    for pkgfile in "/app/mirrors/neoarch/${repo}/os/x86_64/"*.pkg.tar.*; do
         handle_repo_file $repo $pkgfile
     done
 done
 
 for repo in system world galaxy lib32; do
-    for pkgfile in "/app/mirrors/artix/${repo}"/*.pkg.tar.*; do
+    for pkgfile in "/app/mirrors/artix/${repo}/os/x86_64/"*.pkg.tar.*; do
         handle_repo_file $repo $pkgfile
     done
 done
 
 for repo in core extra multilib; do
-    for pkgfile in "/app/mirrors/arch/${repo}"/*.pkg.tar.*; do
+    for pkgfile in "/app/mirrors/arch/${repo}/os/x86_64/"*.pkg.tar.*; do
         handle_repo_file $repo $pkgfile
     done
 done
