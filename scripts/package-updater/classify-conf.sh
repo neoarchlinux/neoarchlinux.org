@@ -38,7 +38,7 @@ find "$pkgroot/usr/bin" "$pkgroot/usr/local/bin" -type f 2>/dev/null | while rea
             --set=file_id="$file_id" \
             --set=user="$bin" <<'SQL'
 INSERT INTO package_file_conf_users (file_id, conf_user)
-VALUES (:file_id, '/' || :user)
+VALUES (:file_id, '/' || :'user')
 ON CONFLICT DO NOTHING;
 SQL
     fi

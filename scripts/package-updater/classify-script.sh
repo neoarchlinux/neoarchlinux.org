@@ -43,6 +43,6 @@ psql_safe \
     --set=file_id="$file_id" \
     --set=interp="$interp" <<'SQL'
 INSERT INTO package_file_script (file_id, script_executable)
-VALUES (:file_id, NULLIF(:interp, ''))
+VALUES (:file_id, NULLIF(:'interp', ''))
 ON CONFLICT (file_id) DO NOTHING;
 SQL

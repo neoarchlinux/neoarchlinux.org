@@ -40,7 +40,7 @@ flush_trigger() {
         --set=rem="$on_remove" <<'SQL'
 INSERT INTO package_file_pacman_hook_triggers
 (file_id, trigger_type, trigger_on_install, trigger_on_upgrade, trigger_on_remove)
-VALUES (:file_id, :type, :ins, :upg, :rem)
+VALUES (:file_id, :'type', :ins, :upg, :rem)
 RETURNING id;
 SQL
 )
@@ -106,6 +106,6 @@ psql_safe \
     --set=desc="$action_desc" <<'SQL'
 INSERT INTO package_file_pacman_hook
 (file_id, action_when, action_description)
-VALUES (:file_id, :when, NULLIF(:desc, ''))
+VALUES (:'file_id', :'when', NULLIF(:'desc', ''))
 ON CONFLICT (file_id) DO NOTHING;
 SQL

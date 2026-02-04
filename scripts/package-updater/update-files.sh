@@ -52,9 +52,9 @@ insert_file_returning_id() {
         file_size
     )
     VALUES (
-        (SELECT id FROM package_meta WHERE repo = :repo AND name = :package),
-        '/' || :file_path,
-        :file_type,
+        (SELECT id FROM package_meta WHERE repo = :'repo' AND name = :'package'),
+        '/' || :'file_path',
+        :'file_type',
         :file_mode,
         :file_size
     )
@@ -135,7 +135,7 @@ handle_repo_file() {
     pkgname=$(psql_safe \
             --set=iden="$iden" \
             --set=repo="$repo" <<'SQL'
-SELECT name FROM package_meta WHERE :iden LIKE name || '-' || version || '-%' AND repo = :repo
+SELECT name FROM package_meta WHERE :'iden' LIKE name || '-' || version || '-%' AND repo = :'repo'
 SQL
 )
 

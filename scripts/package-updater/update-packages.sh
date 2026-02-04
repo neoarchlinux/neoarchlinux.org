@@ -17,21 +17,14 @@ psql_safe() {
 rm -rf "$TMPDIR"
 mkdir -p "$TMPDIR"
 
-REPO_URLS=(
-    "https://mirrors.neoarchlinux.org/neoarch/matrix/os/x86_64/matrix.db"
-    "https://artix.sakamoto.pl/system/os/x86_64/system.db"
-    "https://artix.sakamoto.pl/world/os/x86_64/world.db"
-    "https://artix.sakamoto.pl/galaxy/os/x86_64/galaxy.db"
-    "https://artix.sakamoto.pl/lib32/os/x86_64/lib32.db"
-    "https://arch.sakamoto.pl/core/os/x86_64/core.db"
-    "https://arch.sakamoto.pl/extra/os/x86_64/extra.db"
-    "https://arch.sakamoto.pl/multilib/os/x86_64/multilib.db"
-)
-
-for REPO_URL in "${REPO_URLS[@]}"; do
-    echo "[INFO] Downloading $REPO_URL"
-    curl -fsSL "$REPO_URL" -o "$TMPDIR/$(basename "$REPO_URL")"
-done
+cp "/app/mirrors/neoarch/matrix/os/x86_64/matrix.db" "$TMPDIR/matrix.db"
+cp "/app/mirrors/artix/system/os/x86_64/system.db" "$TMPDIR/system.db"
+cp "/app/mirrors/artix/world/os/x86_64/world.db" "$TMPDIR/world.db"
+cp "/app/mirrors/artix/galaxy/os/x86_64/galaxy.db" "$TMPDIR/galaxy.db"
+cp "/app/mirrors/artix/lib32/os/x86_64/lib32.db" "$TMPDIR/lib32.db"
+cp "/app/mirrors/arch/core/os/x86_64/core.db" "$TMPDIR/core.db"
+cp "/app/mirrors/arch/extra/os/x86_64/extra.db" "$TMPDIR/extra.db"
+cp "/app/mirrors/arch/multilib/os/x86_64/multilib.db" "$TMPDIR/multilib.db"
 
 declare -A CACHE
 
@@ -121,7 +114,7 @@ SQL
 
         # Remove all old relations first
         psql_safe --set=pkg_id="$PKG_ID" <<'SQL'
-DELETE FROM package_relations WHERE package_id = :'pkg_id';
+DELETE FROM package_relations WHERE package_id = :pkg_id;
 SQL
 
         insert_component_and_relation() {

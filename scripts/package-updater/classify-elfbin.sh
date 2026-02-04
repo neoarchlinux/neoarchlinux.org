@@ -30,9 +30,9 @@ psql_safe \
 --set=file_id="$file_id" \
 --set=is_static="$(file "$path" | grep -q static && echo true || echo false)" \
 --set=is_dynamic="$(file "$path" | grep -q dynamic && echo true || echo false)" \
---set=binary_cxx="$(has '__cxa_|std::' && echo true || echo false)" \
+--set=binary_cxx="$(has '__cxa_|std:: &&echo true || echo false)" \
 --set=binary_go="$(has 'go.buildid|runtime.go' && echo true || echo false)" \
---set=binary_rust="$(has 'rust_eh_|core::' && echo true || echo false)" \
+--set=binary_rust="$(has 'rust_eh_|core:: &&echo true || echo false)" \
 --set=compression_bzip2="$(has 'bz2' && echo true || echo false)" \
 --set=compression_lzma="$(has 'lzma|xz' && echo true || echo false)" \
 --set=compression_zlib="$(has 'zlib|deflate' && echo true || echo false)" \
