@@ -28,6 +28,8 @@ cp "/app/mirrors/arch/multilib/os/x86_64/multilib.db" "$TMPDIR/multilib.db"
 
 declare -A CACHE
 
+CACHE["dummy"]=1
+
 echo "[INFO] Building package cache from DB..."
 while IFS='|' read -r key _; do
     CACHE["$key"]=1
