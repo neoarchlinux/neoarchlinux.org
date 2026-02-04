@@ -6,7 +6,13 @@ RUN apk add --no-cache \
     tar \
     postgresql-client \
     coreutils \
-    ca-certificates
+    ca-certificates \
+    rsync \
+    grep \
+    sed \
+    findutils \
+    file \
+    binutils
 
 RUN mkdir -p \
     /usr/local/bin \
