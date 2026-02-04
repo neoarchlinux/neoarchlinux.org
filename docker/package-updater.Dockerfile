@@ -10,15 +10,16 @@ RUN apk add --no-cache \
 
 RUN mkdir -p \
     /usr/local/bin \
-    /etc/crontabs \
     /tmp/package-update
 
-COPY scripts/update-packages.sh /usr/local/bin/update-packages.sh
+COPY scripts/package-updater/* /usr/local/bin/
+RUN chmod +x /usr/local/bin/docker-entrypoint.sh
+RUN chmod +x /usr/local/bin/sync-repos.sh
 RUN chmod +x /usr/local/bin/update-packages.sh
+RUN chmod +x /usr/local/bin/update-files.sh
+RUN chmod +x /usr/local/bin/classify-conf.sh
+RUN chmod +x /usr/local/bin/classify-elfbin.sh
+RUN chmod +x /usr/local/bin/classify-pacman-hook.sh
+RUN chmod +x /usr/local/bin/classify-script.sh
 
-RUN echo "0 2 * * * /usr/local/bin/update-packages.sh" \
-    > /etc/crontabs/root
-
-RUN chmod 600 /etc/crontabs/root
-
-CMD ["crond", "-f", "-l", "2"]
+ENTRYPOINT ["/usr/local/bin/docker-entrypoint.sh"]

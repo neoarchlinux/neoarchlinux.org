@@ -3,12 +3,12 @@ set -euo pipefail
 
 TMPDIR="/tmp/package-update"
 
-echo "==== Starting package database update at $(date) ===="
-
 : "${DB_NAME:?DB_NAME not set}"
 : "${DB_USER:?DB_USER not set}"
 : "${DB_HOST:?DB_HOST not set}"
 : "${DB_PASS:?DB_PASS not set}"
+
+echo "==== Starting package database update at $(date) ===="
 
 psql_safe() {
     PGPASSWORD="$DB_PASS" psql -h "$DB_HOST" -U "$DB_USER" -d "$DB_NAME" -Atq "$@"

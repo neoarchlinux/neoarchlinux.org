@@ -52,8 +52,10 @@ function renderComponent(array $component): void {
     }
 
     if (!empty($component['relation_description'])) {
-        echo ' &mdash; ' . htmlspecialchars($component['relation_description']);
-    } else if (!empty($component['description'])) {
+        echo ' &mdash; (' . htmlspecialchars($component['relation_description']) . ')';
+    }
+    
+    if (!empty($component['description'])) {
         echo ' &mdash; ' . htmlspecialchars($component['description']);
     }
 }
@@ -91,7 +93,7 @@ function renderPackageMeta(array $metaRows): void {
     }
 
     echo '<p><strong>Available in:</strong> ';
-    echo implode(', ', array_map(
+    echo implode(', ', array_map( // TODO: link to https://docs.$DOMAIN/repository/$r['repo'] when page created
         fn($r) => htmlspecialchars(getRepoOwner($r['repo'])) . '\'s ' . htmlspecialchars($r['repo']) . ' (' . htmlspecialchars($r['version']) . ')',
         $repos
     ));
@@ -133,7 +135,7 @@ function renderRelationList(string $title, array $items): void {
 function renderDependencies(array $info): void {
     renderRelationList('Dependencies', $info['dependencies'] ?? []);
     renderRelationList('Optional Dependencies', $info['opt_dependencies'] ?? []);
-    renderRelationList('Make Dependencies', $info['make_dependencies'] ?? []);
+    renderRelationList('Build-time Dependencies', $info['make_dependencies'] ?? []);
 }
 
 function renderDependants(array $info): void {
