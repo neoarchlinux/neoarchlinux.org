@@ -12,7 +12,9 @@ RUN apk add --no-cache \
     sed \
     findutils \
     file \
-    binutils
+    binutils \
+    zstd \
+    xz
 
 RUN mkdir -p \
     /usr/local/bin \
