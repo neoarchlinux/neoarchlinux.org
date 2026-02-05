@@ -34,8 +34,8 @@ insert_file_returning_id() {
     file="$3"
     ftype="$4"
 
-    mode=$(stat -c '%a' "$file" 2>/dev/null || echo 0)
-    size=$(stat -c '%s' "$file" 2>/dev/null || echo 0)
+    mode=$(stat -c '%a' "$BASE_TMP/$repo/$pkg/$file" 2>/dev/null || echo 0)
+    size=$(stat -c '%s' "$BASE_TMP/$repo/$pkg/$file" 2>/dev/null || echo 0)
 
     psql_safe \
         --set=repo="$repo" \
