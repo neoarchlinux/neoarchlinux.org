@@ -9,7 +9,7 @@ require_once __DIR__ . '/doc_parts.php';
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Package: <?= htmlspecialchars($packageInfo['meta'][0]['name']) ?></title>
+    <title>Package <?= htmlspecialchars($packageInfo['meta'][0]['name']) ?></title>
     <link rel="stylesheet" href="/index.css">
     <style>
         main {
@@ -27,6 +27,15 @@ require_once __DIR__ . '/doc_parts.php';
         main a.virtual {
             color: var(--accent-ternary);
         }
+
+        .file-header {
+            font-family: monospace;
+        }
+
+        main .file-header a {
+            color: var(--primary);
+            text-decoration: underline;
+        }
     </style>
 </head>
 <body>
@@ -38,6 +47,8 @@ require_once __DIR__ . '/doc_parts.php';
 <?php
 
 renderPackageMeta($packageInfo['meta']);
+
+renderFiles($packageInfo['meta'], $packageFiles);
 
 renderDependencies($packageInfo);
 renderProvides($packageInfo);

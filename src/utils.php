@@ -52,3 +52,50 @@ function copyPreserve(string $src, string $dst): void {
         chmod($dst, $stat['mode'] & 0777);
     }
 }
+
+function joinWithExceptLast(array $items, string $glue, string $lastGlue): string {
+    $count = count($items);
+    
+    if ($count === 0) {
+        return '';
+    }
+    
+    if ($count === 1) {
+        return $items[0];
+    }
+    
+    if ($count === 2) {
+        return $items[0] . ' and ' . $items[1];
+    }
+    
+    $last = array_pop($items);
+    return implode($glue, $items) . $lastGlue . $last;
+}
+
+function joinWithAnd(array $items): string {
+    return joinWithExceptLast($items, ', ', ' and ');
+}
+
+function joinWithOr(array $items): string {
+    return joinWithExceptLast($items, ', ', ' or ');
+}
+
+function ndigit(int $in, int $n) {
+    $len = (int) floor(log($in, 10)) + 1;
+    $rpos = $len - $n;
+    $tmp = $in - ($in % pow(10, $rpos));
+    return ($tmp % pow(10, $rpos + 1)) / pow(10, $rpos);
+}
+
+function normalizePath(string $path): string {
+    $parts = [];
+    foreach (explode('/', $path) as $part) {
+        if ($part === '' || $part === '.') continue;
+        if ($part === '..') {
+            array_pop($parts);
+        } else {
+            $parts[] = $part;
+        }
+    }
+    return '/' . implode('/', $parts);
+}

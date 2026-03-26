@@ -103,6 +103,9 @@ $buildDb   = "$buildRoot/db";
 ensureDir($buildPkgs);
 ensureDir($buildDb);
 
+// Mark old version as overwritten
+markPackageVersionOverwritten($pdo, $packageId, $repoId, $archId, $packageVersion, $packageRelease);
+
 // Copy existing package filenames from DB into buildPkgs
 $existing = getPackageFilenamesForRepoArch($pdo, $repoId, $archId);
 foreach ($existing as $existingFile) {

@@ -1,3 +1,4 @@
 .env
 /app
 /app-test
+/package-updater/target

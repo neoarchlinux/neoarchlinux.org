@@ -12,6 +12,7 @@ services:
       - ./src:/var/www/src:ro
       - ./app/mirrors:/var/mirrors:rw
       - ./app/gnupg:/srv/http/.gnupg:rw
+      - ./app/man:/app/man:ro
     restart: unless-stopped
     networks:
       - neoarchlinux.org
@@ -62,7 +63,7 @@ services:
       - ./app/logs/package-updater:/var/log/package-updater:rw
       - ./app/mirrors:/app/mirrors:rw
       - ./app/man:/app/man:rw
-    restart: unless-stopped
+    restart: always
     networks:
       - neoarchlinux.org
 

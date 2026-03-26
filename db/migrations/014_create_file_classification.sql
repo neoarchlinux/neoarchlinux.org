@@ -113,7 +113,8 @@ CREATE TABLE package_file_pacman_hook_triggers (
     trigger_type pacman_hook_trigger_type NOT NULL,
     trigger_on_install BOOLEAN NOT NULL,
     trigger_on_upgrade BOOLEAN NOT NULL,
-    trigger_on_remove BOOLEAN NOT NULL
+    trigger_on_remove BOOLEAN NOT NULL,
+    UNIQUE (file_id, trigger_type, trigger_on_install, trigger_on_upgrade, trigger_on_remove)
 );
 
 CREATE TYPE pacman_hook_action_when AS ENUM (
@@ -128,7 +129,13 @@ CREATE TABLE package_file_pacman_hook (
 );
 
 CREATE TABLE pacman_hook_trigger_targets (
-    file_id INT PRIMARY KEY REFERENCES package_files(id) ON DELETE CASCADE,
-    trigger_target TEXT NOT NULL
+    id SERIAL PRIMARY KEY,
+    trigger_id INT NOT NULL REFERENCES package_file_pacman_hook_triggers(id) ON DELETE CASCADE,
+    trigger_target TEXT NOT NULL,
+    UNIQUE (trigger_id, trigger_target)
 );
 
+CREATE TABLE package_file_symlinks (
+    file_id INT PRIMARY KEY REFERENCES package_files(id) ON DELETE CASCADE,
+    link_target TEXT NOT NULL
+);

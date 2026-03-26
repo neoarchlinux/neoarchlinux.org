@@ -30,19 +30,8 @@ function maybeActive(string $host, string $path = ''): string {
             <a href="https://docs.<?php echo $DOMAIN; ?>/installation-guide" <?= maybeActive('docs', 'installation-guide') ?>>Install</a>
             <a href="https://docs.<?php echo $DOMAIN; ?>" <?= maybeActive('docs') ?>>Docs</a>
             <a href="https://iso.<?php echo $DOMAIN; ?>" <?= maybeActive('iso') ?>>ISO</a>
-
-            <div class="header-nav-dropdown desktop-only">
-                <span class="nav-more">More &blacktriangledown;</span>
-                <div class="nav-dropdown-menu">
-                    <a href="https://packages.<?php echo $DOMAIN; ?>" <?= maybeActive('packages') ?>>Packages</a>
-                    <a href="https://mirrors.<?php echo $DOMAIN; ?>" <?= maybeActive('mirrors') ?>>Mirrors</a>
-                </div>
-            </div>
-
-            <div class="mobile-more-links mobile-only">
-                <a href="https://packages.<?php echo $DOMAIN; ?>" <?= maybeActive('packages') ?>>Packages</a>
-                <a href="https://mirrors.<?php echo $DOMAIN; ?>" <?= maybeActive('mirrors') ?>>Mirrors</a>
-            </div>
+            <a href="https://packages.<?php echo $DOMAIN; ?>" <?= maybeActive('packages') ?>>Packages</a>
+            <a href="https://mirrors.<?php echo $DOMAIN; ?>" <?= maybeActive('mirrors') ?>>Mirrors</a>
         </nav>
     </div>
 

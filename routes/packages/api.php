@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-require_once '/var/www/src/config.php';
+require_once '/var/www/src/db.php';
 
 header('Content-Type: application/json; charset=utf-8');
 
@@ -14,8 +14,6 @@ else if (isset($_SERVER['HTTP_REFERER'])) $domain = $_SERVER['HTTP_REFERER'];
 if (str_ends_with($domain, '.' . $DOMAIN)) {
     header('Access-Control-Allow-Origin: ' . $domain);
 }
-
-require_once '/var/www/src/db.php';
 
 $q        = trim($_GET['q'] ?? '');
 $page     = max(1, (int)($_GET['page'] ?? 1));
