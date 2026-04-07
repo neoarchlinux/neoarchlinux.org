@@ -4,7 +4,6 @@ declare(strict_types=1);
 $STAGING_BASE = '/tmp/mirrors/neoarch';
 $MIRROR_BASE  = '/var/mirrors/neoarch';
 
-$ENVIRONMENT = getenv('ENVIRONMENT');
 $DOMAIN = getenv('DOMAIN');
 
 $DB_HOST = getenv('DB_HOST');
