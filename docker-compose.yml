@@ -32,7 +32,7 @@ services:
       - ./app/ssl:/etc/nginx/ssl:ro
       - ./app/logs/nginx:/var/log/nginx:rw
       - ./app/mirrors:/var/mirrors:ro
-      - ./app/isos:/app/isos:ro
+      - ./app/isos/out:/app/isos-out:ro
     restart: unless-stopped
     networks:
       - neoarchlinux.org
@@ -72,6 +72,8 @@ services:
       context: .
       dockerfile: docker/iso-builder.Dockerfile
     container_name: neoarchlinux.org_iso_builder
+    depends_on:
+      - nginx
     volumes:
       - ./app/isos:/app/isos:rw
     restart: unless-stopped

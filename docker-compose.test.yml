@@ -33,7 +33,7 @@ services:
       - ./app-test/ssl:/etc/nginx/ssl:ro
       - ./app-test/logs/nginx:/var/log/nginx:rw
       - ./app-test/mirrors:/var/mirrors:ro
-      - ./app-test/isos:/app/isos:ro
+      - ./app-test/isos/out:/app/isos-out:ro
     restart: unless-stopped
     networks:
       - neoarch-test
