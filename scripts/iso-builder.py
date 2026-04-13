@@ -46,6 +46,8 @@ async def _cmd_ok_async(c, check = True):
 # ~cmds
 
 async def handle(ws):
+    build_id = str(uuid.uuid4())
+
     async def send(status, phase):
         phase_count = 12
         
@@ -67,17 +69,16 @@ async def handle(ws):
         params = init.get("params")
 
         # parse request
-        hostname = params['hostname'] # TODO: set hostname
-        language = params['language'] # TODO: set language
-        # TODO: users
-        # TODO: additional packages
-        # TODO: kernel
+        hostname = params['hostname']
+        language = params['language']
+        timezone = params['timezone']
+        users = params['users']
+        kernels = params['kernels']
         init_system = params['init_system']
-        # TODO: enable_testing
-        # TODO: parallel_downloads
+        live_packages = params['live_packages']
+        system_packages = params['system_packages']
 
         # init vars
-        build_id = str(uuid.uuid4())
         print(f"[{build_id}] Build started")
         out_dir = f"{out_dir_base}/{build_id}"
         iso_name = "neoarchlinux"
@@ -88,8 +89,6 @@ async def handle(ws):
         iso_version = datetime.datetime.now().strftime("%Y.%m.%d")
         install_dir = "neoarch"
         bootmodes = ['uefi.grub']
-        iso_pacman_conf = "/iso/profile/iso.pacman.conf"
-        pacman_conf = "/iso/profile/iso.pacman.conf"
         airootfs_image_type = "erofs"
         airootfs_image_tool_options = ['-zlzma,109', '-E', 'ztailpacking']
         bootstrap_tarball_compression = ['zstd', '-c', '-T0', '--long', '-19']
@@ -118,19 +117,56 @@ async def handle(ws):
         await _cmd_async(f'install -d -m 0755 -o 0 -g 0 -- "{pacstrap_dir}"')
         await _cmd_async(f'while [ -f "{lockfile}" ]; do sleep 1; done')
         await _cmd_async(f'cp -a --reflink=auto -- "{cache_airootfs}/." "{pacstrap_dir}"')
-        # await _cmd_async(f'cp -af --no-preserve=ownership,mode -- "/iso/profile/airootfs/." "{pacstrap_dir}"')
         
-        # fix shadow permissions, TODO: user user's shadow
+        # fix shadow permissions
         await _cmd_async(f'chown -fhR -- "0:0" "{pacstrap_dir}/etc/shadow"')
         await _cmd_async(f'chmod -f -- "400" "{pacstrap_dir}/etc/shadow"')
 
         # make packages
-        await send("Installing your packages", 2)
-        # await _cmd_async(f'env -u TMPDIR pacstrap -C "{cache_dir_base}/{init_system}/pacman.conf" -c -G -M -- "{pacstrap_dir}" {' '.join(additional_packages)} > /dev/null')
-        # TODO: install additional packages
+        await send("Configuring your system", 2)
         
-        # copy correct pacman conf
-        await _cmd_async(f'install -m 0644 -- "{pacman_conf}" "{pacstrap_dir}/etc/pacman.conf"')
+        if len(live_packages) > 0:
+            await _cmd_async(f'env -u TMPDIR pacstrap -C "{cache_dir_base}/{init_system}/pacman.conf" -c -G -M -- "{pacstrap_dir}" {' '.join(live_packages)} > /dev/null')
+
+        with open(f'{pacstrap_dir}/etc/neoarch-installer.json', "w", encoding="utf-8") as f:
+            safe_users = []
+
+            for user in users:
+                password = user.get("password")
+
+                if password is None or password == "":
+                    hashed_password = None
+                else:
+                    proc = subprocess.run(
+                        [
+                            "openssl",
+                            "passwd",
+                            "-6",
+                            "-stdin"
+                        ],
+                        input = password,
+                        stdout = subprocess.PIPE,
+                        stderr = subprocess.PIPE,
+                        text = True,
+                        check = True
+                    )
+                    hashed_password = proc.stdout.strip()
+
+                safe_users.append({
+                    "username": user["username"],
+                    "password": hashed_password,
+                    "admin": user.get("admin", False)
+                })
+
+            f.write(json.dumps({
+                "hostname": hostname,
+                "language": language,
+                "timezone": timezone,
+                "kernels": kernels,
+                "init_system": init_system,
+                "system_packages": system_packages,
+                "users": safe_users
+            }))
 
         # make version
         await send("Creating version files", 3)
@@ -539,11 +575,17 @@ fi
     except Exception as e:
         print(f"[{build_id}] An error occured: {e}")
 
-        await ws.send(json.dumps({
-            "status": "Error"
-        }))
+        try:
+            await ws.send(json.dumps({
+                "status": "Error"
+            }))
+        except websockets.exceptions.ConnectionClosed:
+            print(f"[{build_id}] Client disconnected before error could be sent")
 
-    await ws.close()
+    try:
+        await ws.close()
+    except websockets.exceptions.ConnectionClosed:
+        pass
 
     print(f"[{build_id}] Build finished")
 # ~handle
@@ -554,68 +596,111 @@ async def cleanup_old_files_loop(out_dir_base, max_age_seconds, interval):
         await asyncio.sleep(interval)
 
 async def create_base_airootfs(cache_dir_base, interval):
-    iso_pacman_conf = "/iso/profile/iso.pacman.conf"
-    
     while True:
+        await _cmd_async('rm -rf /etc/pacman.d/gnupg')
+        await _cmd_async('pacman-key --init')
+        await _cmd_async('pacman-key --populate archlinux artix')
+        await _cmd_async('pacman -Syy --noconfirm archlinux-keyring')
+        await _cmd_async('pacman-key --populate archlinux artix')
+
         for init_system in ['openrc', 'systemd', 'runit', 's6', 'dinit']:
-            print(f"[CACHE] Updating airootfs cache: {init_system}")
-            
-            pacstrap_dir = f"{cache_dir_base}/{init_system}/airootfs"
-            lockfile = f"{cache_dir_base}/{init_system}/airootfs.lock"
+            try:
+                print(f"[CACHE] Updating airootfs for {init_system}")
+        
+                await _cmd_async('rm -rf /var/lib/pacman/sync/*')
+                await _cmd_async('rm -rf /var/cache/pacman/pkg/*')
 
-            await _cmd_async(f'rm -rf -- "{pacstrap_dir}"')
-            await _cmd_async(f'mkdir -p -- "{pacstrap_dir}"')
-            await _cmd_async(f'touch -- "{lockfile}"')
+                base = "arch" if init_system == 'systemd' else "artix"
 
-            await _cmd_async(f'cp -af --no-preserve=ownership,mode -- "/iso/profile/airootfs/." "{pacstrap_dir}"')
-    
-            # TODO: use different pacman.conf for when init system is systemd
-            await _cmd_async(f"""
-                pacman-conf --config {iso_pacman_conf} | sed '
-                /CacheDir/d
-                /DBPath/d
-                /HookDir/d
-                /LogFile/d
-                /RootDir/d
-                /\\[options\\]/a CacheDir = /var/cache/pacman/pkg
-                /\\[options\\]/a HookDir = {pacstrap_dir}/etc/pacman.d/hooks/
-                ' > "{cache_dir_base}/{init_system}/pacman.conf"
-                """)
+                pacman_conf = f"/iso/{base}-based/pacman.conf"
+                iso_pacman_conf = f"/iso/{base}-based/iso.pacman.conf"
+                
+                pacstrap_dir = f"{cache_dir_base}/{init_system}/airootfs"
+                lockfile = f"{cache_dir_base}/{init_system}/airootfs.lock"
 
-            packages = [
-                'arch-install-scripts', # ???
-                'base',
-                'base-devel',
-                'efibootmgr',
-                'grub',
-                'mkinitcpio',
-                'mkinitcpio-archiso', # ???
-                'napm',
-                'neoarch-keyring',
-                'networkmanager',
-                'open-vm-tools',
-                'os-prober',
-                'qemu-guest-agent',
-                'syslinux',
-                'virtualbox-guest-utils-nox'
-            ]
+                await _cmd_async(f'rm -rf -- "{pacstrap_dir}"')
+                await _cmd_async(f'mkdir -p -- "{pacstrap_dir}"')
+                await _cmd_async(f'touch -- "{lockfile}"')
 
-            if init_system == 'systemd':
-                pass
-            else:
-                packages.append('artix-archlinux-support')
-                packages.append(init_system)
-                packages.append(f'elogind-{init_system}')
-                packages.append(f'networkmanager-{init_system}')
+                await _cmd_async(f'cp -af --no-preserve=ownership,mode -- "/iso/profile/airootfs/." "{pacstrap_dir}"')
+        
+                await _cmd_async(f"""
+                    pacman-conf --config {iso_pacman_conf} | awk '
+                        /^\\[options\\]/ {{ in_opt=1 }}
+                        in_opt && /^\\[/ && !/^\\[options\\]/ {{ in_opt=0; printed_sig=0 }}
+                        in_opt && /^SigLevel/ {{ if (!printed_sig) {{ print "SigLevel = Never"; printed_sig=1 }}; next }}
+                        {{ print }}
+                    ' | sed '
+                        /CacheDir/d
+                        /DBPath/d
+                        /HookDir/d
+                        /LogFile/d
+                        /RootDir/d
+                        /\\[options\\]/a CacheDir = /var/cache/pacman/pkg
+                        /\\[options\\]/a HookDir = {pacstrap_dir}/etc/pacman.d/hooks/
+                    ' > "{cache_dir_base}/{init_system}/pacman.conf"
+                    """)
 
-            await _cmd_async(f'env -u TMPDIR pacstrap -C "{cache_dir_base}/{init_system}/pacman.conf" -c -G -M -- "{pacstrap_dir}" {' '.join(packages)} > /dev/null')
+                packages = [
+                    'arch-install-scripts',
+                    'base-devel',
+                    'base',
+                    'btrfs-progs',
+                    'dialog',
+                    'dosfstools',
+                    'efibootmgr',
+                    'gptfdisk',
+                    'grub',
+                    'mkinitcpio-archiso',
+                    'mkinitcpio',
+                    'napm',
+                    'neoarch-installer',
+                    'neoarch-keyring',
+                    'networkmanager',
+                    'ntp',
+                    'open-vm-tools',
+                    'os-prober',
+                    'parted',
+                    'qemu-guest-agent',
+                    'syslinux',
+                    'virtualbox-guest-utils-nox'
+                ]
+
+                if init_system == 'systemd':
+                    packages.insert(0, 'archlinux-keyring')
+                else:
+                    packages.append(init_system)
+                    packages.append('artix-archlinux-support')
+                    packages.append('artools-base')
+                    packages.append(f'elogind-{init_system}')
+                    packages.append(f'networkmanager-{init_system}')
+                    packages.append(f'ntp-{init_system}')
+
+                await _cmd_async(
+                    f'env -u TMPDIR pacstrap'
+                    f' -C "{cache_dir_base}/{init_system}/pacman.conf"'
+                    f' -c -G -M -- "{pacstrap_dir}"'
+                    f' {" ".join(packages)} > /dev/null'
+                )
+
+                await _cmd_async(f'rm -f -- "{pacstrap_dir}/etc/pacman.conf"')
+                await _cmd_async(f'install -m 0644 -- "{pacman_conf}" "{pacstrap_dir}/etc/pacman.conf"')
+
+                await _cmd_async(f'arch-chroot "{pacstrap_dir}" pacman-key --init')
+                
+                if init_system != 'systemd':
+                    await _cmd_async(f'arch-chroot "{pacstrap_dir}" pacman-key --populate artix')
+                await _cmd_async(f'arch-chroot "{pacstrap_dir}" pacman-key --populate archlinux')
+                await _cmd_async(f'arch-chroot "{pacstrap_dir}" pacman-key --populate neoarch')
+            except Exception as e:
+                print(f"[ERROR] [CACHE] Updating airootfs for {init_system} failed: {e}")
 
             await _cmd_async(f"rm -f -- {lockfile}")
         
         await asyncio.sleep(interval)
 
 async def main():
-    await asyncio.sleep(15)
+    await asyncio.sleep(5)
 
     asyncio.create_task(cleanup_old_files_loop(out_dir_base, 3600, 600))
     asyncio.create_task(create_base_airootfs(cache_dir_base, 3600))
