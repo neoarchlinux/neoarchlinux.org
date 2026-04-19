@@ -51,34 +51,34 @@ services:
     networks:
       - neoarch-test
 
-  package-updater:
-    build:
-      context: .
-      dockerfile: docker/package-updater.Dockerfile
-    container_name: neoarch_test_package_updater
-    env_file:
-      - test.env
-    depends_on:
-      - postgres
-    volumes:
-      - ./app-test/logs/package-updater:/var/log/package-updater:rw
-      - ./app/mirrors:/app/mirrors:rw
-      - ./app/man:/app/man:rw
-    restart: unless-stopped
-    networks:
-      - neoarch-test
+  # package-updater:
+  #   build:
+  #     context: .
+  #     dockerfile: docker/package-updater.Dockerfile
+  #   container_name: neoarch_test_package_updater
+  #   env_file:
+  #     - test.env
+  #   depends_on:
+  #     - postgres
+  #   volumes:
+  #     - ./app-test/logs/package-updater:/var/log/package-updater:rw
+  #     - ./app/mirrors:/app/mirrors:rw
+  #     - ./app/man:/app/man:rw
+  #   restart: unless-stopped
+  #   networks:
+  #     - neoarch-test
 
-  iso-builder:
-    build:
-      context: .
-      dockerfile: docker/iso-builder.Dockerfile
-    container_name: neoarch_test_iso_builder
-    volumes:
-      - ./app-test/isos:/app/isos:rw
-    restart: unless-stopped
-    networks:
-      - neoarch-test
-    privileged: true
+  # iso-builder:
+  #   build:
+  #     context: .
+  #     dockerfile: docker/iso-builder.Dockerfile
+  #   container_name: neoarch_test_iso_builder
+  #   volumes:
+  #     - ./app-test/isos:/app/isos:rw
+  #   restart: unless-stopped
+  #   networks:
+  #     - neoarch-test
+  #   privileged: true
 
 networks:
   neoarch-test:
