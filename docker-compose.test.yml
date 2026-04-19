@@ -10,6 +10,7 @@ services:
       - ./public:/var/www/html/public:ro
       - ./routes:/var/www/html/routes:ro
       - ./src:/var/www/src:ro
+      - ./lib:/var/www/lib:ro
       - ./app-test/mirrors:/var/mirrors:rw
       - ./app-test/gnupg:/srv/http/.gnupg:rw
     restart: unless-stopped
@@ -29,6 +30,7 @@ services:
       - ./nginx/error.nginx.conf:/etc/nginx/error.nginx.conf:ro
       - ./public:/var/www/html/public:ro
       - ./routes:/var/www/html/routes:ro
+      - ./assets:/var/www/html/assets:ro
       - ./src:/var/www/src:ro
       - ./app-test/ssl:/etc/nginx/ssl:ro
       - ./app-test/logs/nginx:/var/log/nginx:rw

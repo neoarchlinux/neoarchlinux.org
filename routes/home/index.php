@@ -1,10 +1,12 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="X-UA-Compatible" content="ie=edge">
-    <meta name="description" content="NeoArch Linux - An Arch and Artix based distribution featuring the NAPM package manager, init system freedom, and effortless system customization.">
+    <meta name="description"
+        content="NeoArch Linux - An Arch and Artix based distribution featuring the NAPM package manager, init system freedom, and effortless system customization.">
     <title>NeoArch Linux</title>
     <link rel="stylesheet" href="/index.css">
     <style>
@@ -212,34 +214,40 @@
         }
     </style>
 </head>
+
 <body>
 
-<?php require_once '/var/www/src/header.php'; ?>
+    <?php require_once '/var/www/src/header.php'; ?>
 
-<main>
-    <section class="hero">
-        <img src="/icons/favicon-1024.png">
-        <h1>NeoArch Linux</h1>
-        <p class="tagline">Arch Linux evolved. Init freedom meets intelligent package management.<br>From newcomers to power users, your system works the way you want it to.</p>
-        <div class="cta-group">
-            <a href="https://iso.neoarchlinux.org" class="btn btn-primary">Download ISO</a>
-            <a href="https://docs.neoarchlinux.org/installation-guide" class="btn btn-secondary">Installation Guide</a>
-        </div>
-    </section>
+    <main>
+        <section class="hero">
+            <img src="/icons/favicon-1024.png">
+            <h1>NeoArch Linux</h1>
+            <p class="tagline">Arch Linux evolved. Init freedom meets intelligent package management.<br>From newcomers
+                to power users, your system works the way you want it to.</p>
+            <div class="cta-group">
+                <a href="https://iso.<?= $DOMAIN ?>" class="btn btn-primary">Download ISO</a>
+                <a href="https://docs.<?= $DOMAIN ?>/general/install-guide" class="btn btn-secondary">Installation
+                    Guide</a>
+            </div>
+        </section>
 
-    <section class="features">
-        <article class="feature">
-            <h2>Init System Freedom</h2>
-            <p>NeoArch unites the best of Arch and Artix Linux. Choose systemd, OpenRC, runit, dinit, or s6 during installation. Your system, your philosophy, zero compromise.</p>
-        </article>
+        <section class="features">
+            <article class="feature">
+                <h2>Init System Freedom</h2>
+                <p>NeoArch unites the best of Arch and Artix Linux. Choose systemd, OpenRC, runit, dinit, or s6 during
+                    installation. Your system, your philosophy, zero compromise.</p>
+            </article>
 
-        <article class="feature highlight">
-            <h2>Meet NAPM</h2>
-            <p>The NeoArch Package Manager is the root of your system. While pacman requires manual intervention for dependency conflicts, keyring issues, and database locks, NAPM automates error resolution and provides a unified interface that just works.</p>
-            
-            <div class="code-comparison">
-                <div class="code-block error">
-<pre>$ sudo pacman -S fastfetch
+            <article class="feature highlight">
+                <h2>Meet NAPM</h2>
+                <p>The NeoArch Package Manager is the root of your system. While pacman requires manual intervention for
+                    dependency conflicts, keyring issues, and database locks, NAPM automates error resolution and
+                    provides a unified interface that just works.</p>
+
+                <div class="code-comparison">
+                    <div class="code-block error">
+                        <pre>$ sudo pacman -S fastfetch
 resolving dependencies...
 looking for conflicting packages...
 
@@ -257,9 +265,9 @@ error: failed retrieving file 'fastfetch-2.58.0-1-x86_64.pkg.tar.zst' from mirro
 warning: failed to retrieve some files
 error: failed to commit transaction (failed to retrieve some files)
 Errors occurred, no packages were upgraded.</pre>
-                </div>
-                <div class="code-block success">
-<pre>$ sudo napm install fastfetch
+                    </div>
+                    <div class="code-block success">
+                        <pre>$ sudo napm install fastfetch
 I: Installing fastfetch-2.58.0-1 with all its dependencies
 I: Resolving dependencies
 I: Checking for conflicts
@@ -289,28 +297,35 @@ I: Checking for file conflicts
 I: Starting transaction
 I: Installing yyjson-0.12.0-1.3
 I: Installing fastfetch-2.60.0-1</pre>
+                    </div>
                 </div>
-            </div>
-            
-            <p><a href="https://docs.neoarchlinux.org/napm">Explore NAPM documentation &rightarrow;</a></p>
-        </article>
 
-        <article class="feature">
-            <h2>Simplified Arch Experience</h2>
-            <p>NeoArch preserves everything you love about Arch: the rolling release model, the AUR, the performance, while removing the friction. Our <a href="https://docs.neoarchlinux.org/installation-guide">installation guide</a> gets you from boot to desktop in minutes, not hours, with sensible defaults that don't sacrifice flexibility.</p>
-        </article>
+                <p><a href="https://docs.<?= $DOMAIN ?>/napm">Explore NAPM documentation &rightarrow;</a></p>
+            </article>
 
-        <article class="feature">
-            <h2>Your System, Pre-configured</h2>
-            <p>Tired of reconfiguring after every install? NeoArch custom ISOs let you bake your kernel, desktop environment, drivers, and dotfiles directly into the installation medium. Whether you manage a fleet of workstations or just want your rice preserved, <a href="https://iso.neoarchlinux.org">generate your perfect ISO</a> and deploy in minutes.</p>
-        </article>
+            <article class="feature">
+                <h2>Simplified Arch Experience</h2>
+                <p>NeoArch preserves everything you love about Arch: the rolling release model, the AUR, the
+                    performance, while removing the friction. Our <a
+                        href="https://docs.<?= $DOMAIN ?>/general/install-guide">installation guide</a> gets you from
+                    boot to desktop in minutes, not hours, with sensible defaults that don't sacrifice flexibility.</p>
+            </article>
 
-        <?php /* <article class="feature">
-            <h2>Rice at the Speed of Thought</h2>
-            <p>Aesthetic configuration shouldn't take hours. The <code>napm rice</code> command reads your profile and automatically applies window manager themes, terminal colors, font configurations, and keyboard shortcuts. Backup your setup to a single file, share it across machines, or deploy it on fresh installs instantly.</p>
-        </article> */ ?>
-    </section>
-</main>
+            <article class="feature">
+                <h2>Your System, Pre-configured</h2>
+                <p>Tired of reconfiguring after every install? NeoArch custom ISOs let you bake your kernel, desktop
+                    environment, drivers, and dotfiles directly into the installation medium. Whether you manage a fleet
+                    of workstations or just want your rice preserved, <a href="https://iso.<?= $DOMAIN ?>">generate
+                        your perfect ISO</a> and deploy in minutes.</p>
+            </article>
+
+            <?php /* <article class="feature">
+  <h2>Rice at the Speed of Thought</h2>
+  <p>Aesthetic configuration shouldn't take hours. The <code>napm rice</code> command reads your profile and automatically applies window manager themes, terminal colors, font configurations, and keyboard shortcuts. Backup your setup to a single file, share it across machines, or deploy it on fresh installs instantly.</p>
+</article> */ ?>
+        </section>
+    </main>
 
 </body>
+
 </html>
