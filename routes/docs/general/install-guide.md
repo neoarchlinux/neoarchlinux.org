@@ -10,9 +10,9 @@ Welcome to the NeoArch Linux installation guide. This document walks you through
 - [UEFI firmware](https://wikipedia.org/wiki/UEFI)
 - Internet connection
 
-## Step 1 - Generate or download an ISO
+## Step 1 - Generate an ISO
 
-Visit the [ISO builder](https://iso.neoarchlinux.org) to generate a custom ISO baked with your preferred settings, or download a generic ISO.
+Visit the [ISO builder](https://iso.neoarchlinux.org) to generate a custom ISO baked with your preferred settings.
 
 When building a custom ISO you configure:
 
