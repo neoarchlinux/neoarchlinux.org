@@ -590,9 +590,9 @@ fi
     print(f"[{build_id}] Build finished")
 # ~handle
 
-async def cleanup_old_files_loop(out_dir_base, max_age_seconds, interval):
+async def cleanup_old_files_loop(out_dir_base, interval):
     while True:
-        await _cmd_async(f"find {out_dir_base} -mindepth 1 -maxdepth 1 -type d -mmin +120 -exec rm -rf {{}} +")
+        await _cmd_async(f"find {out_dir_base} -mindepth 1 -maxdepth 1 -type d -mmin +1440 -exec rm -rf {{}} +")
         await asyncio.sleep(interval)
 
 async def create_base_airootfs(cache_dir_base, interval):
@@ -702,7 +702,7 @@ async def create_base_airootfs(cache_dir_base, interval):
 async def main():
     await asyncio.sleep(5)
 
-    asyncio.create_task(cleanup_old_files_loop(out_dir_base, 3600, 600))
+    asyncio.create_task(cleanup_old_files_loop(out_dir_base, 3600))
     asyncio.create_task(create_base_airootfs(cache_dir_base, 3600))
 
     port = 4150
