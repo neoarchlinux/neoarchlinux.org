@@ -9,7 +9,7 @@ $pdo = getPdo();
 $q = $_GET['q'] ?? null;
 
 if ($q !== null) {
-    if (!preg_match('/^[a-zA-Z0-9-]{2}$/', $q)) {
+    if (!preg_match('/^[a-zA-Z0-9@._+-]{1,2}$/', $q)) {
         http_response_code(400);
         exit('Invalid query');
     }
@@ -38,7 +38,7 @@ if ($q === null) {
         $prefix = $row['prefix'];
 
         echo '<sitemap>';
-        echo '<loc>https://packages.' . $DOMAIN . '/sitemap?q=' . htmlspecialchars($prefix, ENT_XML1) . '</loc>';
+        echo '<loc>https://packages.' . $DOMAIN . '/sitemap?q=' . htmlspecialchars(rawurlencode($prefix), ENT_XML1) . '</loc>';
         echo '</sitemap>';
     }
 
@@ -46,19 +46,17 @@ if ($q === null) {
     exit;
 }
 
-$prefix = $q . '%';
-
 $stmt = $pdo->prepare("
     SELECT c.name, MAX(pm.last_updated) AS last_updated
     FROM components c
     LEFT JOIN package_meta pm ON pm.name = c.name
-    WHERE c.name LIKE :prefix
+    WHERE LEFT(c.name, 2) = :prefix
     GROUP BY c.name
     ORDER BY c.name
 ");
 
 $stmt->execute([
-    ':prefix' => $prefix
+    ':prefix' => $q
 ]);
 
 $components = $stmt->fetchAll(PDO::FETCH_ASSOC);
