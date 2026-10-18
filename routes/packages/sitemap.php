@@ -6,12 +6,16 @@ require_once '/var/www/src/db.php';
 
 $pdo = getPdo();
 
-$q = $_GET['q'] ?? null;
+$path = parse_url($_SERVER['REQUEST_URI'] ?? '/sitemap', PHP_URL_PATH);
 
-if ($q !== null) {
+$q = null;
+
+if (preg_match('#^/sitemap/(.*)$#', (string) $path, $matches)) {
+    $q = rawurldecode($matches[1]);
+
     if (!preg_match('/^[a-zA-Z0-9@._+-]{1,2}$/', $q)) {
-        http_response_code(400);
-        exit('Invalid query');
+        http_response_code(404);
+        exit('Not found');
     }
 }
 
@@ -38,7 +42,7 @@ if ($q === null) {
         $prefix = $row['prefix'];
 
         echo '<sitemap>';
-        echo '<loc>https://packages.' . $DOMAIN . '/sitemap?q=' . htmlspecialchars(rawurlencode($prefix), ENT_XML1) . '</loc>';
+        echo '<loc>https://packages.' . $DOMAIN . '/sitemap/' . htmlspecialchars(rawurlencode($prefix), ENT_XML1) . '</loc>';
         echo '</sitemap>';
     }
 
