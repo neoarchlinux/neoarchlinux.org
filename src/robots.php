@@ -36,4 +36,4 @@ if ($site === 'iso') {
 }
 
 echo "\n";
-echo 'Sitemap: https://' . $hosts[$site] . "/sitemap\n";
+echo 'Sitemap: https://' . $hosts[$site] . "/sitemap" . $site === 'packages' ? '-index' : '' . "\n";
